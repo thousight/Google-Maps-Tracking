@@ -4,39 +4,51 @@ import android.Manifest;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
-import android.location.Criteria;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.location.Location;
 import android.location.LocationManager;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
-import android.support.v4.view.MarginLayoutParamsCompat;
 import android.support.v4.view.ViewPager;
 import android.support.v7.widget.AppCompatCheckBox;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.RotateAnimation;
 import android.widget.CompoundButton;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.Toast;
 
-import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.rd.PageIndicatorView;
+import com.rd.animation.AnimationType;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, SensorEventListener {
 
     private static GoogleMap mMap;
     private static Location currentLocation;
     private static LocationManager locationManager;
+    private static Sensor accelerometer;
+    private static SensorManager sensorManager;
     private static final int LOCATIONS_GRANTED = 1;
     ViewPager viewPager;
     FrameLayout frameLayout;
     AppCompatCheckBox satellite;
+    ImageView compass;
+    PageIndicatorView indicator;
+    private float currentDegree = 0f;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,7 +66,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         FragmentPagerItemAdapter adapter = new FragmentPagerItemAdapter(getSupportFragmentManager());
         viewPager.setAdapter(adapter);
         frameLayout = (FrameLayout) findViewById(R.id.frameLayout);
-        satellite = (AppCompatCheckBox)findViewById(R.id.satellite);
+        satellite = (AppCompatCheckBox) findViewById(R.id.satellite);
+        compass = (ImageView) findViewById(R.id.compass);
+        indicator = (PageIndicatorView) findViewById(R.id.pageIndicatorView);
+
+        // Set up page indicator
+        indicator.setCount(2);
+        indicator.setViewPager(viewPager);
+        indicator.setSelectedColor(R.color.indicatorSelected);
+        indicator.setUnselectedColor(R.color.indicatorUnselected);
+        indicator.setAnimationType(AnimationType.WORM);
+        indicator.setAnimationDuration(300);
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -63,20 +85,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         setLayoutDimentions(mapFragment); // Set elements' heights based on screen sizes
 
-        // Check if app is first time opening, show swiping hint if it is
-        SharedPreferences sharedPreferences = getSharedPreferences("LocationTracking", MODE_PRIVATE);
-        if (sharedPreferences.getBoolean("FirstOpen", true)) {
-            Toast.makeText(this, "Swipe right at the bottom to view records >>>", Toast.LENGTH_LONG).show();
-            SharedPreferences.Editor editor = sharedPreferences.edit();
-            editor.putBoolean("FirstOpen", false);
-            editor.apply();
+        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER); // Preferred
+            if (currentLocation == null) {
+                currentLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            }
         }
 
-        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-        currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER); // Preferred
-        if (currentLocation == null) {
-            currentLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-        }
+        sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
     }
 
 
@@ -112,9 +131,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if (isChecked) {
                     mMap.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
                     satellite.setTextColor(Color.parseColor("#ffffff"));
+                    compass.setColorFilter(Color.parseColor("#ffffff"));
                 } else {
                     mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
                     satellite.setTextColor(Color.parseColor("#333333"));
+                    compass.setColorFilter(Color.parseColor("#333333"));
                 }
             }
         });
@@ -127,6 +148,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             case LOCATIONS_GRANTED: {
                 if (grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                        return;
+                    }
+                    currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER); // Preferred
+                    if (currentLocation == null) {
+                        currentLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                    }
                     updateMapUI(true);
                     centerCamera();
                 }
@@ -139,12 +167,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     protected void onResume() {
         super.onResume();
         updateMapUI(true);
+        sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         updateMapUI(false);
+        sensorManager.unregisterListener(this, accelerometer);
     }
 
     private void setLayoutDimentions(SupportMapFragment mapFragment) {
@@ -206,4 +236,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        // Rotate compass
+        float degree = event.values[0] * 20;
+        RotateAnimation animation = new RotateAnimation(
+                currentDegree, -degree,
+                Animation.RELATIVE_TO_SELF, 0.5f,
+                Animation.RELATIVE_TO_SELF, 0.5f);
+        animation.setDuration(210);
+        animation.setFillAfter(true);
+        compass.startAnimation(animation);
+
+        currentDegree = -degree - 50f;
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+    }
 }
