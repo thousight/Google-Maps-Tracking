@@ -3,6 +3,7 @@ package www.markwen.space.google_maps_tracking;
 import android.Manifest;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationManager;
@@ -10,9 +11,13 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
+import android.support.v4.view.MarginLayoutParamsCompat;
 import android.support.v4.view.ViewPager;
+import android.support.v7.widget.AppCompatCheckBox;
 import android.util.DisplayMetrics;
 import android.view.ViewGroup;
+import android.widget.CompoundButton;
+import android.widget.FrameLayout;
 import android.widget.Toast;
 
 import com.google.android.gms.location.LocationListener;
@@ -30,6 +35,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private static LocationManager locationManager;
     private static final int LOCATIONS_GRANTED = 1;
     ViewPager viewPager;
+    FrameLayout frameLayout;
+    AppCompatCheckBox satellite;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,13 +53,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         viewPager = (ViewPager) findViewById(R.id.pager);
         FragmentPagerItemAdapter adapter = new FragmentPagerItemAdapter(getSupportFragmentManager());
         viewPager.setAdapter(adapter);
+        frameLayout = (FrameLayout) findViewById(R.id.frameLayout);
+        satellite = (AppCompatCheckBox)findViewById(R.id.satellite);
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-        setLayoutDimentions(mapFragment, viewPager); // Set elements' heights based on screen sizes
+        setLayoutDimentions(mapFragment); // Set elements' heights based on screen sizes
 
         // Check if app is first time opening, show swiping hint if it is
         SharedPreferences sharedPreferences = getSharedPreferences("LocationTracking", MODE_PRIVATE);
@@ -93,8 +102,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.setMyLocationEnabled(true);
         mMap.getUiSettings().setCompassEnabled(true);
         mMap.getUiSettings().setMyLocationButtonEnabled(true);
+        mMap.getUiSettings().setTiltGesturesEnabled(false);
 
         centerCamera();
+
+        satellite.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    mMap.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
+                    satellite.setTextColor(Color.parseColor("#ffffff"));
+                } else {
+                    mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
+                    satellite.setTextColor(Color.parseColor("#333333"));
+                }
+            }
+        });
     }
 
     @Override
@@ -124,17 +147,25 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         updateMapUI(false);
     }
 
-    private void setLayoutDimentions(SupportMapFragment mapFragment, ViewPager pager) {
+    private void setLayoutDimentions(SupportMapFragment mapFragment) {
         // Get device display dimentions
         DisplayMetrics displayMetrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
 
-        // Set Map height to 3/4 of the display
+        // Set Map height to 2/3 of the display
         ViewGroup.LayoutParams mapParams = mapFragment.getView().getLayoutParams();
         mapParams.height = displayMetrics.heightPixels * 2 / 3;
 
+        // Set Framelayout and Checkbox height to 2/3 of the display
+        ViewGroup.LayoutParams frameParams = frameLayout.getLayoutParams();
+        frameParams.height = displayMetrics.heightPixels * 2 / 3;
+
+        // Set Checkbox margin
+        ViewGroup.MarginLayoutParams checkboxParams = (ViewGroup.MarginLayoutParams) satellite.getLayoutParams();
+        checkboxParams.setMargins(getStatusBarHeight() * 3, (int)(getStatusBarHeight() * 1.5), getStatusBarHeight() * 3, 0);
+
         // Set Button Wrapper height to 1/4 of the display
-        ViewGroup.LayoutParams wrapperParams = pager.getLayoutParams();
+        ViewGroup.LayoutParams wrapperParams = viewPager.getLayoutParams();
         wrapperParams.height = displayMetrics.heightPixels / 3;
     }
 
