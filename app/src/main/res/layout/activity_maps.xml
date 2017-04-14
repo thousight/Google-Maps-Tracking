@@ -3,6 +3,7 @@
     android:layout_height="match_parent"
     xmlns:android="http://schemas.android.com/apk/res/android">
     <LinearLayout
+        android:orientation="vertical"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
@@ -14,5 +15,37 @@
             android:layout_height="450dp"
             tools:context="www.markwen.space.google_maps_tracking.MapsActivity" />
 
+        <LinearLayout
+            android:id="@+id/buttonWrapper"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center">
+            <Button
+                android:id="@+id/recordButton"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="16dp"
+                android:paddingLeft="8dp"
+                android:paddingRight="8dp"
+                android:paddingTop="2dp"
+                android:background="@drawable/record_button_background"
+                android:drawableStart="@drawable/navigate_icon"
+                android:drawableLeft="@drawable/navigate_icon"
+                android:layout_gravity="center" />
+            <Button
+                android:id="@+id/stopButton"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="16dp"
+                android:paddingLeft="11dp"
+                android:paddingRight="11dp"
+                android:background="@drawable/record_button_background"
+                android:layout_gravity="center"
+                android:drawableStart="@drawable/stop_icon"
+                android:drawableLeft="@drawable/stop_icon" />
+        </LinearLayout>
     </LinearLayout>
 </ScrollView>
