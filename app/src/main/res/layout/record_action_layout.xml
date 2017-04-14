@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <LinearLayout
+        android:id="@+id/buttonWrapper"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:layout_alignParentTop="true">
+        <Button
+            android:id="@+id/recordButton"
+            android:animateLayoutChanges="true"
+            android:layout_width="84dp"
+            android:layout_height="84dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:paddingTop="4dp"
+            android:background="@drawable/record_button_background"
+            android:drawableStart="@drawable/navigate_icon"
+            android:drawableLeft="@drawable/navigate_icon"
+            android:layout_gravity="center" />
+        <Button
+            android:id="@+id/stopButton"
+            android:animateLayoutChanges="true"
+            android:layout_width="84dp"
+            android:layout_height="84dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp"
+            android:paddingTop="1dp"
+            android:paddingLeft="13dp"
+            android:paddingRight="13dp"
+            android:background="@drawable/record_button_background"
+            android:layout_gravity="center"
+            android:drawableStart="@drawable/stop_icon"
+            android:drawableLeft="@drawable/stop_icon" />
+    </LinearLayout>
+</RelativeLayout>

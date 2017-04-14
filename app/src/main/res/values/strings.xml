@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">Google Maps Tracking</string>
+    <string name="app_name">Location Tracking</string>
     <string name="title_activity_maps">Map</string>
 </resources>

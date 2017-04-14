@@ -1,32 +1,35 @@
 package www.markwen.space.google_maps_tracking;
 
 import android.Manifest;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.location.Criteria;
+import android.location.Location;
+import android.location.LocationManager;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
+import android.support.v4.view.ViewPager;
 import android.util.DisplayMetrics;
-import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.LinearLayout;
+import android.widget.Toast;
 
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.maps.CameraUpdate;
+import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.MarkerOptions;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
-    private GoogleMap mMap;
+    private static GoogleMap mMap;
+    private static Location currentLocation;
+    private static LocationManager locationManager;
     private static final int LOCATIONS_GRANTED = 1;
-    Button recordBtn, stopBtn;
-    LinearLayout btnWrapper;
+    ViewPager viewPager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,16 +43,31 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     Manifest.permission.ACCESS_COARSE_LOCATION}, LOCATIONS_GRANTED);
         }
 
-        // Initialize Buttons
-        initializeButtons();
+        viewPager = (ViewPager) findViewById(R.id.pager);
+        FragmentPagerItemAdapter adapter = new FragmentPagerItemAdapter(getSupportFragmentManager());
+        viewPager.setAdapter(adapter);
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-        setLayoutDimentions(mapFragment, btnWrapper); // Set elements' heights based on screen sizes
+        setLayoutDimentions(mapFragment, viewPager); // Set elements' heights based on screen sizes
 
+        // Check if app is first time opening, show swiping hint if it is
+        SharedPreferences sharedPreferences = getSharedPreferences("LocationTracking", MODE_PRIVATE);
+        if (sharedPreferences.getBoolean("FirstOpen", true)) {
+            Toast.makeText(this, "Swipe right at the bottom to view records >>>", Toast.LENGTH_LONG).show();
+            SharedPreferences.Editor editor = sharedPreferences.edit();
+            editor.putBoolean("FirstOpen", false);
+            editor.apply();
+        }
+
+        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+        currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER); // Preferred
+        if (currentLocation == null) {
+            currentLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+        }
     }
 
 
@@ -65,8 +83,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-        updateMapUI(true);
 
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+
+        mMap.setPadding(0, getStatusBarHeight(), 0, 0); // Remove overlay of status bar
+        mMap.setMyLocationEnabled(true);
+        mMap.getUiSettings().setCompassEnabled(true);
+        mMap.getUiSettings().setMyLocationButtonEnabled(true);
+
+        centerCamera();
     }
 
     @Override
@@ -77,6 +105,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if (grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     updateMapUI(true);
+                    centerCamera();
                 }
                 break;
             }
@@ -95,49 +124,55 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         updateMapUI(false);
     }
 
-    private void initializeButtons() {
-        btnWrapper = (LinearLayout)findViewById(R.id.buttonWrapper);
-        recordBtn = (Button)findViewById(R.id.recordButton);
-        stopBtn = (Button)findViewById(R.id.stopButton);
-        stopBtn.setVisibility(View.GONE);
-        recordBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                recordBtn.setVisibility(View.GONE);
-                stopBtn.setVisibility(View.VISIBLE);
-
-            }
-        });
-        stopBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                recordBtn.setVisibility(View.VISIBLE);
-                stopBtn.setVisibility(View.GONE);
-
-            }
-        });
-    }
-
-    private void setLayoutDimentions(SupportMapFragment mapFragment, LinearLayout btnLayout) {
+    private void setLayoutDimentions(SupportMapFragment mapFragment, ViewPager pager) {
         // Get device display dimentions
         DisplayMetrics displayMetrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
 
         // Set Map height to 3/4 of the display
         ViewGroup.LayoutParams mapParams = mapFragment.getView().getLayoutParams();
-        mapParams.height = displayMetrics.heightPixels * 3 / 4;
+        mapParams.height = displayMetrics.heightPixels * 2 / 3;
 
         // Set Button Wrapper height to 1/4 of the display
-        ViewGroup.LayoutParams wrapperParams = btnLayout.getLayoutParams();
-        wrapperParams.height = displayMetrics.heightPixels / 4;
+        ViewGroup.LayoutParams wrapperParams = pager.getLayoutParams();
+        wrapperParams.height = displayMetrics.heightPixels / 3;
     }
 
     private void updateMapUI(boolean isLocationEnabled) {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                && mMap != null) {
             mMap.setMyLocationEnabled(isLocationEnabled);
             mMap.getUiSettings().setCompassEnabled(isLocationEnabled);
             mMap.getUiSettings().setMyLocationButtonEnabled(isLocationEnabled);
         }
     }
+
+    private int getStatusBarHeight() {
+        int result = 0;
+        int resourceId = getResources().getIdentifier("status_bar_height", "dimen", "android");
+        if (resourceId > 0) {
+            result = getResources().getDimensionPixelSize(resourceId);
+        }
+        return result;
+    }
+
+    public static void moveCameraTo(LatLng location) {
+        CameraPosition cameraPosition = new CameraPosition.Builder()
+                .target(location)      // Sets the center of the map to location user
+                .zoom(17)                   // Sets the zoom
+                .build();                   // Creates a CameraPosition from the builder
+        mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+    }
+
+    public void centerCamera() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        if (currentLocation != null) {
+            // Zoom camera to center around current location
+            moveCameraTo(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()));
+        }
+    }
+
 }
