@@ -125,8 +125,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         // Set Map height to 3/4 of the display
         ViewGroup.LayoutParams mapParams = mapFragment.getView().getLayoutParams();
-        // Removing heights of notification bar and bottom navigation
-        mapParams.height = displayMetrics.heightPixels * 3 / 4 - 70;
+        mapParams.height = displayMetrics.heightPixels * 3 / 4;
 
         // Set Button Wrapper height to 1/4 of the display
         ViewGroup.LayoutParams wrapperParams = btnLayout.getLayoutParams();
