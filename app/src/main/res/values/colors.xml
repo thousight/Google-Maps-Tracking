@@ -3,6 +3,6 @@
     <color name="colorPrimary">#ffffff</color>
     <color name="colorPrimaryDark">#5b86e5</color>
     <color name="colorAccent">#ffffff</color>
-    <color name="indicatorSelected">#bbbbbb</color>
-    <color name="indicatorUnselected">#eeeeee</color>
+    <color name="indicatorSelected">#38baff</color>
+    <color name="indicatorUnselected">#91d8ff</color>
 </resources>

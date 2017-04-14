@@ -1,8 +1,8 @@
 package www.markwen.space.google_maps_tracking;
 
 import android.Manifest;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -17,14 +17,12 @@ import android.os.Bundle;
 import android.support.v4.view.ViewPager;
 import android.support.v7.widget.AppCompatCheckBox;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.RotateAnimation;
 import android.widget.CompoundButton;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
-import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -35,6 +33,9 @@ import com.google.android.gms.maps.model.LatLng;
 import com.rd.PageIndicatorView;
 import com.rd.animation.AnimationType;
 
+import www.markwen.space.google_maps_tracking.components.DBHelper;
+import www.markwen.space.google_maps_tracking.components.FragmentPagerItemAdapter;
+
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, SensorEventListener {
 
     private static GoogleMap mMap;
@@ -43,6 +44,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private static Sensor accelerometer;
     private static SensorManager sensorManager;
     private static final int LOCATIONS_GRANTED = 1;
+    private DBHelper dbHelper;
+    private SQLiteDatabase db;
     ViewPager viewPager;
     FrameLayout frameLayout;
     AppCompatCheckBox satellite;
@@ -62,6 +65,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     Manifest.permission.ACCESS_COARSE_LOCATION}, LOCATIONS_GRANTED);
         }
 
+        // Initialize views
         viewPager = (ViewPager) findViewById(R.id.pager);
         FragmentPagerItemAdapter adapter = new FragmentPagerItemAdapter(getSupportFragmentManager());
         viewPager.setAdapter(adapter);
@@ -85,6 +89,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         setLayoutDimentions(mapFragment); // Set elements' heights based on screen sizes
 
+        // Obtain current location
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
                 && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
@@ -94,8 +99,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         }
 
+        // Initialize accelerometer for compass
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+
+        // Initialize SQLiteDB
+        dbHelper = new DBHelper(this);
+        db = dbHelper.getWritableDatabase();
     }
 
 
@@ -117,6 +127,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             return;
         }
 
+        // GoogleMaps configs
         mMap.setPadding(0, getStatusBarHeight(), 0, 0); // Remove overlay of status bar
         mMap.setMyLocationEnabled(true);
         mMap.getUiSettings().setCompassEnabled(true);
@@ -125,6 +136,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         centerCamera();
 
+        // Satellite checkbox functions
         satellite.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -199,6 +211,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         wrapperParams.height = displayMetrics.heightPixels / 3;
     }
 
+    // Optimize battery usage, called when user is using the app
     private void updateMapUI(boolean isLocationEnabled) {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
                 && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
@@ -209,6 +222,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
+    // To help optimize code
     private int getStatusBarHeight() {
         int result = 0;
         int resourceId = getResources().getIdentifier("status_bar_height", "dimen", "android");
@@ -218,6 +232,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         return result;
     }
 
+    // Allow other fragments to use to move camera of the Map
     public static void moveCameraTo(LatLng location) {
         CameraPosition cameraPosition = new CameraPosition.Builder()
                 .target(location)      // Sets the center of the map to location user

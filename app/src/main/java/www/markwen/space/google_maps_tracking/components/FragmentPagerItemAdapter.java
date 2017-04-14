@@ -1,4 +1,4 @@
-package www.markwen.space.google_maps_tracking;
+package www.markwen.space.google_maps_tracking.components;
 
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
