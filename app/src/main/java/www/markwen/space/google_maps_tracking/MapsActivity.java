@@ -52,6 +52,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     ImageView compass;
     PageIndicatorView indicator;
     private float currentDegree = 0f;
+    private boolean isRecording = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -268,6 +269,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+    }
+
+    // Start recording location data
+    public void startRecording() {
+        String points = "";
+        isRecording = true;
+
+    }
+
+    // Stop recording location data and store it in DB
+    public void stopRecording() {
+        isRecording = false;
 
     }
 }

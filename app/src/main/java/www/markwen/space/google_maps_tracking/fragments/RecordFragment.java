@@ -10,6 +10,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
 
+import www.markwen.space.google_maps_tracking.MapsActivity;
 import www.markwen.space.google_maps_tracking.R;
 
 /**
@@ -18,10 +19,12 @@ import www.markwen.space.google_maps_tracking.R;
 
 public class RecordFragment extends Fragment {
     Button recordBtn, stopBtn;
+    MapsActivity activity;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        activity = (MapsActivity)getActivity();
     }
 
     @Nullable
@@ -47,7 +50,8 @@ public class RecordFragment extends Fragment {
                         .setDuration(300);
                 Snackbar.make(v, "Start recording location, press stop to save it", Snackbar.LENGTH_LONG).show();
 
-                // TODO: Start recording location data with service
+                // Start recording location data
+                activity.startRecording();
             }
         });
         stopBtn.setOnClickListener(new View.OnClickListener() {
@@ -63,7 +67,8 @@ public class RecordFragment extends Fragment {
                         .alpha(1f)
                         .setDuration(300);
 
-                // TODO: Stop recording location data and store it in DB
+                // Stop recording location data and store it in DB
+                activity.stopRecording();
             }
         });
 

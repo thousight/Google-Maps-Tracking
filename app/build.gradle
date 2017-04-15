@@ -38,5 +38,9 @@ dependencies {
 
     // Page Indicator
     compile 'com.romandanylyk:pageindicatorview:0.1.2'
+
+    // Material Dialog
+    compile 'com.afollestad.material-dialogs:core:0.9.4.3'
+
     testCompile 'junit:junit:4.12'
 }
