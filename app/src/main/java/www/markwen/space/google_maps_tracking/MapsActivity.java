@@ -11,12 +11,15 @@ import android.hardware.SensorManager;
 import android.location.Location;
 import android.location.LocationManager;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
+import android.support.v4.content.res.ResourcesCompat;
 import android.support.v4.view.ViewPager;
 import android.support.v7.widget.AppCompatCheckBox;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
@@ -25,27 +28,47 @@ import android.widget.CompoundButton;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.FusedLocationProviderApi;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.rd.PageIndicatorView;
 import com.rd.animation.AnimationType;
+
+import java.lang.reflect.Array;
+import java.util.ArrayList;
 
 import www.markwen.space.google_maps_tracking.components.CustomViewPager;
 import www.markwen.space.google_maps_tracking.components.DBHelper;
 import www.markwen.space.google_maps_tracking.components.FragmentPagerItemAdapter;
+import www.markwen.space.google_maps_tracking.components.Record;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, SensorEventListener {
+public class MapsActivity extends FragmentActivity implements
+        OnMapReadyCallback,
+        SensorEventListener,
+        LocationListener,
+        GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener {
 
     private static GoogleMap mMap;
     private static Location currentLocation;
-    private static LocationManager locationManager;
+    private static LocationRequest locationRequest;
+    private FusedLocationProviderApi fusedLocationProvider;
+    private GoogleApiClient googleApiClient;
     private static Sensor magnetometer, accelerometer;
     private static SensorManager sensorManager;
     private static final int LOCATIONS_GRANTED = 1;
+    private static int accentColor;
     private DBHelper dbHelper;
     private SQLiteDatabase db;
     CustomViewPager viewPager;
@@ -57,6 +80,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     float[] mGravity;
     float[] mGeomagnetic;
     private boolean isRecording = false;
+    private ArrayList<LatLng> recordedPoints = new ArrayList<>();
+    private Record record;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,12 +103,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         satellite = (AppCompatCheckBox) findViewById(R.id.satellite);
         compass = (ImageView) findViewById(R.id.compass);
         indicator = (PageIndicatorView) findViewById(R.id.pageIndicatorView);
+        accentColor = ResourcesCompat.getColor(getResources(), R.color.colorAccent, null);
 
         // Set up page indicator
         indicator.setCount(2);
         indicator.setViewPager(viewPager);
-        indicator.setSelectedColor(R.color.indicatorSelected);
-        indicator.setUnselectedColor(R.color.indicatorUnselected);
+        indicator.setSelectedColor(ResourcesCompat.getColor(getResources(), R.color.pagerIndicatorSelected, null));
+        indicator.setUnselectedColor(ResourcesCompat.getColor(getResources(), R.color.pagerIndicatorUnselected, null));
         indicator.setAnimationType(AnimationType.WORM);
         indicator.setAnimationDuration(300);
 
@@ -94,15 +120,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         setLayoutDimentions(mapFragment); // Set elements' heights based on screen sizes
 
-        // Obtain current location
-        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER); // Preferred
-            if (currentLocation == null) {
-                currentLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-            }
-        }
+        // Initialize FusedLocationProviderApi
+        fusedLocationProvider = LocationServices.FusedLocationApi;
+        googleApiClient = new GoogleApiClient.Builder(this)
+                .addApi(LocationServices.API)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .build();
+        locationRequest = new LocationRequest();
+        locationRequest.setInterval(10000);
+        locationRequest.setFastestInterval(5000);
+        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
         // Initialize magnetometer for compass
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
@@ -169,10 +197,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                         return;
                     }
-                    currentLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER); // Preferred
-                    if (currentLocation == null) {
-                        currentLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                    }
+                    currentLocation = fusedLocationProvider.getLastLocation(googleApiClient); // Preferred
                     updateMapUI(true);
                     centerCamera();
                 }
@@ -212,7 +237,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         // Set Checkbox margin
         ViewGroup.MarginLayoutParams checkboxParams = (ViewGroup.MarginLayoutParams) satellite.getLayoutParams();
-        checkboxParams.setMargins(getStatusBarHeight() * 3, (int)(getStatusBarHeight() * 1.5), getStatusBarHeight() * 3, 0);
+        checkboxParams.setMargins(getStatusBarHeight() * 3, (int) (getStatusBarHeight() * 1.5), getStatusBarHeight() * 3, 0);
 
         // Set Button Wrapper height to 1/4 of the display
         ViewGroup.LayoutParams wrapperParams = viewPager.getLayoutParams();
@@ -275,9 +300,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 SensorManager.getOrientation(R, orientation);
                 int azimut = (int) Math.round(Math.toDegrees(orientation[0]));
                 RotateAnimation animation = new RotateAnimation(
-                currentDegree, azimut,
-                Animation.RELATIVE_TO_SELF, 0.5f,
-                Animation.RELATIVE_TO_SELF, 0.5f);
+                        currentDegree, azimut,
+                        Animation.RELATIVE_TO_SELF, 0.5f,
+                        Animation.RELATIVE_TO_SELF, 0.5f);
                 animation.setDuration(200);
                 animation.setFillAfter(true);
                 compass.startAnimation(animation);
@@ -293,10 +318,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     // Start recording location data
     public void startRecording() {
-        String points = "";
         isRecording = true;
         viewPager.setPagingEnabled(false);
         indicator.setVisibility(View.INVISIBLE);
+        record = new Record();
+        recordedPoints = new ArrayList<>();
     }
 
     // Stop recording location data and store it in DB
@@ -304,5 +330,78 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         isRecording = false;
         viewPager.setPagingEnabled(true);
         indicator.setVisibility(View.VISIBLE);
+    }
+
+    @Override
+    public void onConnected(@Nullable Bundle bundle) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        fusedLocationProvider.requestLocationUpdates(googleApiClient, locationRequest, this);
+        // Obtain currentLocation
+        currentLocation = fusedLocationProvider.getLastLocation(googleApiClient);
+        centerCamera();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        googleApiClient.connect();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        googleApiClient.disconnect();
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+
+    }
+
+    @Override
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+        if (isRecording) {
+            LatLng newPoint = new LatLng(location.getLatitude(), location.getLongitude());
+            moveCameraTo(newPoint);
+            recordedPoints.add(newPoint);
+            if (recordedPoints.size() > 1) {
+                createDashedLine(recordedPoints.get(recordedPoints.size()-2), recordedPoints.get(recordedPoints.size()-1));
+            }
+        }
+    }
+
+    public static void createDashedLine(LatLng latLngOrig, LatLng latLngDest){
+        double difLat = latLngDest.latitude - latLngOrig.latitude;
+        double difLng = latLngDest.longitude - latLngOrig.longitude;
+
+        double zoom = mMap.getCameraPosition().zoom;
+
+        double divLat = difLat / (zoom * 2);
+        double divLng = difLng / (zoom * 2);
+
+        LatLng tmpLatOri = latLngOrig;
+
+        for(int i = 0; i < (zoom * 2); i++){
+            LatLng loopLatLng = tmpLatOri;
+
+            if(i > 0){
+                loopLatLng = new LatLng(tmpLatOri.latitude + (divLat * 0.25f), tmpLatOri.longitude + (divLng * 0.25f));
+            }
+
+            mMap.addPolyline(new PolylineOptions()
+                    .add(loopLatLng)
+                    .add(new LatLng(tmpLatOri.latitude + divLat, tmpLatOri.longitude + divLng))
+                    .color(accentColor)
+                    .width(5f));
+
+            tmpLatOri = new LatLng(tmpLatOri.latitude + divLat, tmpLatOri.longitude + divLng);
+        }
     }
 }

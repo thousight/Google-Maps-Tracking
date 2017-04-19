@@ -14,29 +14,25 @@ import java.util.Date;
  */
 
 public class Record {
-    private int id; // Primary key
     private String name;
     private Date date;
     private String city;
     private ArrayList<LatLng> points = new ArrayList<>();
 
-    public Record(int id) {
-        this.id = id;
+    public Record() {
         name = "";
         date = new Date();
         city = "";
     }
 
-    public Record(int id, String name, String city, String points) {
-        this.id = id;
+    public Record(String name, String city, String points) {
         this.name = name;
         date = new Date();
         this.city = city;
         this.points = pointsStringToArrayList(points);
     }
 
-    public Record(int id, String name, String date, String city, String points) {
-        this.id = id;
+    public Record(String name, String date, String city, String points) {
         this.name = name;
         this.city = city;
 

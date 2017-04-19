@@ -70,8 +70,6 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="6dp"
-                    attrs:piv_selectedColor="@color/indicatorSelected"
-                    attrs:piv_unselectedColor="@color/indicatorUnselected"
                     attrs:piv_interactiveAnimation="true"
                     attrs:piv_viewPager="@id/pager"/>
             </RelativeLayout>
