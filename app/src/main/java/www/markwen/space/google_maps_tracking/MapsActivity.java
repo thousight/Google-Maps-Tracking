@@ -280,7 +280,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 animation.setDuration(200);
                 animation.setFillAfter(true);
                 compass.startAnimation(animation);
-                currentDegree = azimut - 10f; // -10f is to correct the image angle
+                currentDegree = azimut - 20; // -20 is to correct the image angle
             }
         }
     }
