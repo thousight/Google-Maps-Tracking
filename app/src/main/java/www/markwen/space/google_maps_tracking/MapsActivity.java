@@ -41,7 +41,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private static GoogleMap mMap;
     private static Location currentLocation;
     private static LocationManager locationManager;
-    private static Sensor accelerometer;
+    private static Sensor magnetometer, accelerometer;
     private static SensorManager sensorManager;
     private static final int LOCATIONS_GRANTED = 1;
     private DBHelper dbHelper;
@@ -100,8 +100,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         }
 
-        // Initialize accelerometer for compass
+        // Initialize magnetometer for compass
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
         // Initialize SQLiteDB
@@ -180,6 +181,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     protected void onResume() {
         super.onResume();
         updateMapUI(true);
+        sensorManager.registerListener(this, magnetometer, SensorManager.SENSOR_DELAY_NORMAL);
         sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
     }
 
@@ -187,6 +189,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     protected void onPause() {
         super.onPause();
         updateMapUI(false);
+        sensorManager.unregisterListener(this, magnetometer);
         sensorManager.unregisterListener(this, accelerometer);
     }
 
@@ -252,19 +255,34 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
+    float[] mGravity;
+    float[] mGeomagnetic;
+
     @Override
     public void onSensorChanged(SensorEvent event) {
         // Rotate compass
-        float degree = event.values[0] * 20;
-        RotateAnimation animation = new RotateAnimation(
-                currentDegree, -degree,
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER)
+            mGravity = event.values;
+        if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD)
+            mGeomagnetic = event.values;
+        if (mGravity != null && mGeomagnetic != null) {
+            float R[] = new float[9];
+            float I[] = new float[9];
+            boolean success = SensorManager.getRotationMatrix(R, I, mGravity, mGeomagnetic);
+            if (success) {
+                float orientation[] = new float[3];
+                SensorManager.getOrientation(R, orientation);
+                int azimut = (int) Math.round(Math.toDegrees(orientation[0]));
+                RotateAnimation animation = new RotateAnimation(
+                currentDegree, azimut,
                 Animation.RELATIVE_TO_SELF, 0.5f,
                 Animation.RELATIVE_TO_SELF, 0.5f);
-        animation.setDuration(210);
-        animation.setFillAfter(true);
-        compass.startAnimation(animation);
-
-        currentDegree = -degree - 50f;
+                animation.setDuration(200);
+                animation.setFillAfter(true);
+                compass.startAnimation(animation);
+                currentDegree = azimut - 10f; // -10f is to correct the image angle
+            }
+        }
     }
 
     @Override
