@@ -17,6 +17,7 @@ import android.os.Bundle;
 import android.support.v4.view.ViewPager;
 import android.support.v7.widget.AppCompatCheckBox;
 import android.util.DisplayMetrics;
+import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.RotateAnimation;
@@ -33,6 +34,7 @@ import com.google.android.gms.maps.model.LatLng;
 import com.rd.PageIndicatorView;
 import com.rd.animation.AnimationType;
 
+import www.markwen.space.google_maps_tracking.components.CustomViewPager;
 import www.markwen.space.google_maps_tracking.components.DBHelper;
 import www.markwen.space.google_maps_tracking.components.FragmentPagerItemAdapter;
 
@@ -46,12 +48,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private static final int LOCATIONS_GRANTED = 1;
     private DBHelper dbHelper;
     private SQLiteDatabase db;
-    ViewPager viewPager;
+    CustomViewPager viewPager;
     FrameLayout frameLayout;
     AppCompatCheckBox satellite;
     ImageView compass;
     PageIndicatorView indicator;
     private float currentDegree = 0f;
+    float[] mGravity;
+    float[] mGeomagnetic;
     private boolean isRecording = false;
 
     @Override
@@ -67,7 +71,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         // Initialize views
-        viewPager = (ViewPager) findViewById(R.id.pager);
+        viewPager = (CustomViewPager) findViewById(R.id.pager);
         FragmentPagerItemAdapter adapter = new FragmentPagerItemAdapter(getSupportFragmentManager());
         viewPager.setAdapter(adapter);
         frameLayout = (FrameLayout) findViewById(R.id.frameLayout);
@@ -255,9 +259,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    float[] mGravity;
-    float[] mGeomagnetic;
-
     @Override
     public void onSensorChanged(SensorEvent event) {
         // Rotate compass
@@ -294,12 +295,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void startRecording() {
         String points = "";
         isRecording = true;
-
+        viewPager.setPagingEnabled(false);
+        indicator.setVisibility(View.INVISIBLE);
     }
 
     // Stop recording location data and store it in DB
     public void stopRecording() {
         isRecording = false;
-
+        viewPager.setPagingEnabled(true);
+        indicator.setVisibility(View.VISIBLE);
     }
 }
