@@ -47,7 +47,7 @@ public class GridFragment extends Fragment {
         dbHelper = ((MapsActivity)getActivity()).getDBHelper();
         allData = dbHelper.getAllRecords(db, getContext());
 
-        gridViewAdapter = new GridViewAdapter(allData, getContext());
+        gridViewAdapter = new GridViewAdapter(allData, getContext(), db, dbHelper);
         gridView.setAdapter(gridViewAdapter);
         return view;
     }

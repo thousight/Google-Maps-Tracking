@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.pm.PackageManager;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -56,6 +57,7 @@ import com.google.android.gms.maps.model.PolylineOptions;
 import com.rd.PageIndicatorView;
 import com.rd.animation.AnimationType;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
@@ -96,7 +98,6 @@ public class MapsActivity extends FragmentActivity implements
     float[] mGeomagnetic;
     private boolean isRecording = false;
     private ArrayList<LatLng> recordedPoints = new ArrayList<>();
-    private static ArrayList<Polyline> linesOnMap = new ArrayList<>();
     private Record record;
 
     @Override
@@ -348,10 +349,6 @@ public class MapsActivity extends FragmentActivity implements
         recordedPoints = new ArrayList<>();
 
         // Clear Polylines on map
-        for(int i = 0; i < linesOnMap.size(); i++) {
-            linesOnMap.get(i).remove();
-            linesOnMap.remove(i);
-        }
         mMap.clear();
     }
 
@@ -361,6 +358,25 @@ public class MapsActivity extends FragmentActivity implements
         viewPager.setPagingEnabled(true);
         indicator.setVisibility(View.VISIBLE);
 
+        // Do nothing if there are no points recorded
+        if (recordedPoints.size() == 0) {
+            Toast.makeText(this, "Nothing recorded", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Capture Map screenshot
+        moveCameraTo(recordedPoints.get(recordedPoints.size()/2));
+        final byte[][] screenshot = new byte[1][1];
+        mMap.snapshot(new GoogleMap.SnapshotReadyCallback() {
+            @Override
+            public void onSnapshotReady(Bitmap bitmap) {
+                ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream);
+                screenshot[0] = stream.toByteArray();
+            }
+        });
+
+        // Dialog for saving Record to DB
         MaterialDialog saveDialog = new MaterialDialog.Builder(this)
                 .title("Save Location")
                 .customView(R.layout.save_dialog_layout, false)
@@ -382,6 +398,7 @@ public class MapsActivity extends FragmentActivity implements
                         }
                         record.setName(recordName.getText().toString());
                         record.setPoints(recordedPoints);
+                        record.setImage(screenshot[0]);
                         dbHelper.saveRecord(db, record);
                         Toast.makeText(MapsActivity.this, "Record saved", Toast.LENGTH_SHORT).show();
                     }
@@ -389,6 +406,7 @@ public class MapsActivity extends FragmentActivity implements
                 .negativeText("Cancel")
                 .negativeColor(ResourcesCompat.getColor(getResources(), R.color.colorNagative, null))
                 .build();
+        // Dialog view settings
         final EditText recordName = (EditText)saveDialog.getView().findViewById(R.id.save_location_name);
         final ImageButton clearButton = (ImageButton) saveDialog.getView().findViewById(R.id.clearButton);
         clearButton.setOnClickListener(new View.OnClickListener() {
@@ -410,6 +428,7 @@ public class MapsActivity extends FragmentActivity implements
 
             @Override
             public void afterTextChanged(Editable editable) {
+                // Hide clear button when there is no text
                 if (editable.toString().equals("")) {
                     clearButton.setVisibility(View.INVISIBLE);
                 } else {
@@ -418,6 +437,8 @@ public class MapsActivity extends FragmentActivity implements
             }
         });
         recordName.setText(new Date().toString());
+
+        // Display dialog
         saveDialog.show();
     }
 
@@ -484,10 +505,10 @@ public class MapsActivity extends FragmentActivity implements
                 loopLatLng = new LatLng(tmpLatOri.latitude + (divLat * 0.25f), tmpLatOri.longitude + (divLng * 0.25f));
             }
 
-            linesOnMap.add(mMap.addPolyline(new PolylineOptions()
+            mMap.addPolyline(new PolylineOptions()
                     .add(loopLatLng)
                     .add(new LatLng(tmpLatOri.latitude + divLat, tmpLatOri.longitude + divLng))
-                    .color(accentColor)));
+                    .color(accentColor));
 
             tmpLatOri = new LatLng(tmpLatOri.latitude + divLat, tmpLatOri.longitude + divLng);
         }

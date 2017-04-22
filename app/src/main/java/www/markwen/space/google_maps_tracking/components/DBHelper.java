@@ -51,18 +51,21 @@ public class DBHelper extends SQLiteOpenHelper {
         ArrayList<Record> results = new ArrayList<>();
         Cursor cursor = db.rawQuery("select * from " + dbName, null);
 
-        if (cursor .moveToFirst()) {
+        if (cursor.moveToFirst()) {
             while (!cursor.isAfterLast()) {
+                int id = cursor.getInt(cursor.getColumnIndex("id"));
                 String name = cursor.getString(cursor.getColumnIndex("name"));
                 String date = cursor.getString(cursor.getColumnIndex("date"));
                 String city = cursor.getString(cursor.getColumnIndex("city"));
                 String pointsStr = cursor.getString(cursor.getColumnIndex("pointsStr"));
+                byte[] image = cursor.getBlob(cursor.getColumnIndex("image"));
 
-                Record newRecord = new Record();
+                Record newRecord = new Record(id);
                 newRecord.setName(name);
                 newRecord.setDate(date, context);
                 newRecord.setCity(city);
                 newRecord.setPoints(pointsStr);
+                newRecord.setImage(image);
 
                 results.add(newRecord);
                 cursor.moveToNext();
@@ -70,5 +73,9 @@ public class DBHelper extends SQLiteOpenHelper {
         }
 
         return results;
+    }
+
+    public void deleteRecord(SQLiteDatabase db, int id) {
+        db.delete(dbName, "id=?", new String[]{String.valueOf(id)});
     }
 }

@@ -18,6 +18,7 @@ import java.util.Locale;
  */
 
 public class Record {
+    private int id; // Primary Key
     private String name;
     private Date date;
     private String city;
@@ -30,25 +31,11 @@ public class Record {
         city = "";
     }
 
-    public Record(String name, String city, String points) {
-        this.name = name;
+    public Record(int id) {
+        this.id = id;
+        name = "";
         date = new Date();
-        this.city = city;
-        this.points = pointsStringToArrayList(points);
-    }
-
-    public Record(String name, String date, String city, String points) {
-        this.name = name;
-        this.city = city;
-
-        DateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm");
-        try {
-            this.date = dateFormat.parse(date);
-        } catch (ParseException e) {
-            e.printStackTrace();
-        }
-
-        this.points = pointsStringToArrayList(points);
+        city = "";
     }
 
     private ArrayList<LatLng> pointsStringToArrayList(String points) {
@@ -124,5 +111,13 @@ public class Record {
 
     public byte[] getImage() {
         return image;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public int getId() {
+        return id;
     }
 }

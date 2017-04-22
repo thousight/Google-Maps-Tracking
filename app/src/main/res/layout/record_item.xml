@@ -5,14 +5,15 @@
     android:layout_margin="6dp"
     xmlns:android="http://schemas.android.com/apk/res/android">
     <LinearLayout
+        android:id="@+id/cardLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="?android:selectableItemBackground"
         android:orientation="vertical">
 
         <ImageView
             android:id="@+id/recordImage"
             android:src="@drawable/ic_timeline_black_48px"
-            android:background="?android:selectableItemBackground"
             android:scaleType="centerCrop"
             android:layout_width="match_parent"
             android:layout_height="100dp" />
@@ -24,6 +25,8 @@
             android:layout_marginLeft="6dp"
             android:layout_marginStart="6dp"
             android:ellipsize="end"
+            android:textStyle="bold"
+            android:textSize="17sp"
             android:maxLines="1" />
 
         <TextView
@@ -32,6 +35,7 @@
             android:layout_height="20dp"
             android:maxLines="1"
             android:ellipsize="end"
+            android:textStyle="italic"
             android:layout_marginStart="6dp"
             android:layout_marginLeft="6dp"/>
 
