@@ -8,8 +8,11 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationManager;
+import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -18,6 +21,8 @@ import android.os.Bundle;
 import android.support.v4.content.res.ResourcesCompat;
 import android.support.v4.view.ViewPager;
 import android.support.v7.widget.AppCompatCheckBox;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
@@ -25,9 +30,14 @@ import android.view.ViewGroup;
 import android.view.animation.Animation;
 import android.view.animation.RotateAnimation;
 import android.widget.CompoundButton;
+import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.Toast;
 
+import com.afollestad.materialdialogs.DialogAction;
+import com.afollestad.materialdialogs.MaterialDialog;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.FusedLocationProviderApi;
@@ -45,8 +55,12 @@ import com.google.android.gms.maps.model.PolylineOptions;
 import com.rd.PageIndicatorView;
 import com.rd.animation.AnimationType;
 
+import java.io.IOException;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
 
 import www.markwen.space.google_maps_tracking.components.CustomViewPager;
 import www.markwen.space.google_maps_tracking.components.DBHelper;
@@ -81,6 +95,7 @@ public class MapsActivity extends FragmentActivity implements
     float[] mGeomagnetic;
     private boolean isRecording = false;
     private ArrayList<LatLng> recordedPoints = new ArrayList<>();
+    private static ArrayList<Polyline> linesOnMap = new ArrayList<>();
     private Record record;
 
     @Override
@@ -89,10 +104,17 @@ public class MapsActivity extends FragmentActivity implements
         setContentView(R.layout.activity_maps);
 
         // Check permissions
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION}, LOCATIONS_GRANTED);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+                ActivityCompat.requestPermissions(this, new String[]{
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                        Manifest.permission.READ_EXTERNAL_STORAGE}, LOCATIONS_GRANTED);
+            }
         }
 
         // Initialize views
@@ -323,6 +345,13 @@ public class MapsActivity extends FragmentActivity implements
         indicator.setVisibility(View.INVISIBLE);
         record = new Record();
         recordedPoints = new ArrayList<>();
+
+        // Clear Polylines on map
+        for(int i = 0; i < linesOnMap.size(); i++) {
+            linesOnMap.get(i).remove();
+            linesOnMap.remove(i);
+        }
+        mMap.clear();
     }
 
     // Stop recording location data and store it in DB
@@ -330,6 +359,65 @@ public class MapsActivity extends FragmentActivity implements
         isRecording = false;
         viewPager.setPagingEnabled(true);
         indicator.setVisibility(View.VISIBLE);
+
+        MaterialDialog saveDialog = new MaterialDialog.Builder(this)
+                .title("Save Location")
+                .customView(R.layout.save_dialog_layout, false)
+                .positiveText("Save")
+                .onPositive(new MaterialDialog.SingleButtonCallback() {
+                    @Override
+                    public void onClick(@NonNull MaterialDialog dialog, @NonNull DialogAction which) {
+                        EditText recordName = (EditText)dialog.getView().findViewById(R.id.save_location_name);
+                        Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
+                        try {
+                            if (recordedPoints.size() > 0) {
+                                List<Address> addresses = geocoder.getFromLocation(recordedPoints.get(0).latitude, recordedPoints.get(0).longitude, 1);
+                                if (addresses != null && addresses.size() > 0) {
+                                    record.setCity(addresses.get(0).getLocality());
+                                }
+                            }
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        record.setName(recordName.getText().toString());
+                        record.setPoints(recordedPoints);
+                        dbHelper.saveRecord(db, record);
+                        Toast.makeText(MapsActivity.this, "Record saved", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .negativeText("Cancel")
+                .negativeColor(ResourcesCompat.getColor(getResources(), R.color.colorNagative, null))
+                .build();
+        final EditText recordName = (EditText)saveDialog.getView().findViewById(R.id.save_location_name);
+        final ImageButton clearButton = (ImageButton) saveDialog.getView().findViewById(R.id.clearButton);
+        clearButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                recordName.setText("");
+            }
+        });
+        recordName.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+                if (editable.toString().equals("")) {
+                    clearButton.setVisibility(View.INVISIBLE);
+                } else {
+                    clearButton.setVisibility(View.VISIBLE);
+                }
+            }
+        });
+        recordName.setText(new Date().toString());
+        saveDialog.show();
     }
 
     @Override
@@ -395,11 +483,10 @@ public class MapsActivity extends FragmentActivity implements
                 loopLatLng = new LatLng(tmpLatOri.latitude + (divLat * 0.25f), tmpLatOri.longitude + (divLng * 0.25f));
             }
 
-            mMap.addPolyline(new PolylineOptions()
+            linesOnMap.add(mMap.addPolyline(new PolylineOptions()
                     .add(loopLatLng)
                     .add(new LatLng(tmpLatOri.latitude + divLat, tmpLatOri.longitude + divLng))
-                    .color(accentColor)
-                    .width(5f));
+                    .color(accentColor)));
 
             tmpLatOri = new LatLng(tmpLatOri.latitude + divLat, tmpLatOri.longitude + divLng);
         }

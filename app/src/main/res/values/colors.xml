@@ -5,4 +5,5 @@
     <color name="colorAccent">#38baff</color>
     <color name="pagerIndicatorSelected">#888888</color>
     <color name="pagerIndicatorUnselected">#cccccc</color>
+    <color name="colorNagative">#F44336</color>
 </resources>

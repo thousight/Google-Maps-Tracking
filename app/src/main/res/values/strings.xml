@@ -3,4 +3,6 @@
     <string name="title_activity_maps">Map</string>
     <string name="satellite">Satellite</string>
     <string name="compass">compass</string>
+    <string name="name">Name</string>
+    <string name="clear_button">Clear button</string>
 </resources>

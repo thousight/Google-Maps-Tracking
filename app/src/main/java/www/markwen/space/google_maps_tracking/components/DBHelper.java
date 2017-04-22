@@ -23,12 +23,16 @@ public class DBHelper extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        db.execSQL("CREATE TABLE " + dbName + " ( id INTEGER PRIMARY KEY, name CHAR(50), date CHAR(50), city CHAR(50), pointsStr CHAR(9999));");
+        db.execSQL("CREATE TABLE " + dbName + " (id INTEGER PRIMARY KEY, name CHAR(50), date CHAR(50), city CHAR(50), pointsStr CHAR(9999));");
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         db.execSQL("DROP TABLE IF EXISTS " + dbName);
         onCreate(db);
+    }
+
+    public void saveRecord(SQLiteDatabase db, Record record) {
+        db.execSQL("INSERT INTO " + dbName + " VALUES(NULL, '" + record.getName() + "', '" + record.getDate().toString() + "', '" + record.getCity() + "', '" + record.getPointsString() + "');");
     }
 }

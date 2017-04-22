@@ -66,6 +66,14 @@ public class Record {
         this.name = name;
     }
 
+    public String getCity() {
+        return city;
+    }
+
+    public void setCity(String name) {
+        this.city = name;
+    }
+
     public Date getDate() {
         return date;
     }
@@ -85,6 +93,14 @@ public class Record {
 
     public ArrayList<LatLng> getPoints() {
         return points;
+    }
+
+    public String getPointsString() {
+        String result = "";
+        for (int i = 0; i < points.size(); i++) {
+            result += (points.get(i).latitude + "," + points.get(i).longitude + "\n");
+        }
+        return result;
     }
 
     public void setPoints(ArrayList<LatLng> points) {
