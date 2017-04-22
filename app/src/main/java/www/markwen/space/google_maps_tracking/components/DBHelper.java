@@ -1,8 +1,11 @@
 package www.markwen.space.google_maps_tracking.components;
 
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+
+import java.util.ArrayList;
 
 /**
  * Created by markw on 4/14/2017.
@@ -34,5 +37,30 @@ public class DBHelper extends SQLiteOpenHelper {
 
     public void saveRecord(SQLiteDatabase db, Record record) {
         db.execSQL("INSERT INTO " + dbName + " VALUES(NULL, '" + record.getName() + "', '" + record.getDate().toString() + "', '" + record.getCity() + "', '" + record.getPointsString() + "');");
+    }
+
+    public ArrayList<Record> getAllRecords(SQLiteDatabase db, Context context) {
+        ArrayList<Record> results = new ArrayList<>();
+        Cursor cursor = db.rawQuery("select * from " + dbName, null);
+
+        if (cursor .moveToFirst()) {
+            while (!cursor.isAfterLast()) {
+                String name = cursor.getString(cursor.getColumnIndex("name"));
+                String date = cursor.getString(cursor.getColumnIndex("date"));
+                String city = cursor.getString(cursor.getColumnIndex("city"));
+                String pointsStr = cursor.getString(cursor.getColumnIndex("pointsStr"));
+
+                Record newRecord = new Record();
+                newRecord.setName(name);
+                newRecord.setDate(date, context);
+                newRecord.setCity(city);
+                newRecord.setPoints(pointsStr);
+
+                results.add(newRecord);
+                cursor.moveToNext();
+            }
+        }
+
+        return results;
     }
 }

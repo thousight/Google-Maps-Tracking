@@ -3,6 +3,7 @@ package www.markwen.space.google_maps_tracking;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
 import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -490,5 +491,13 @@ public class MapsActivity extends FragmentActivity implements
 
             tmpLatOri = new LatLng(tmpLatOri.latitude + divLat, tmpLatOri.longitude + divLng);
         }
+    }
+
+    public DBHelper getDBHelper() {
+        return dbHelper;
+    }
+
+    public SQLiteDatabase getDB() {
+        return db;
     }
 }

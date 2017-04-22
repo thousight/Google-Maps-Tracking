@@ -1,5 +1,8 @@
 package www.markwen.space.google_maps_tracking.components;
 
+import android.content.Context;
+import android.util.Log;
+
 import com.google.android.gms.maps.model.LatLng;
 
 import java.io.BufferedReader;
@@ -52,7 +55,9 @@ public class Record {
 
         for (String line : lines) {
             String[] point = line.split(",");
-            result.add(new LatLng(Double.parseDouble(point[0]), Double.parseDouble(point[1])));
+            if (!point[0].equals("") && !point[1].equals("")) {
+                result.add(new LatLng(Float.parseFloat(point[0]), Float.parseFloat(point[1])));
+            }
         }
 
         return result;
@@ -82,8 +87,8 @@ public class Record {
         this.date = date;
     }
 
-    public void setDate(String date) {
-        DateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm");
+    public void setDate(String date, Context context) {
+        DateFormat dateFormat = android.text.format.DateFormat.getDateFormat(context);
         try {
             this.date = dateFormat.parse(date);
         } catch (ParseException e) {
