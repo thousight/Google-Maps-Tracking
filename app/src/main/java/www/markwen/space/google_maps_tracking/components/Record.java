@@ -11,6 +11,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Locale;
 
 /**
  * Created by markw on 4/14/2017.
@@ -21,6 +22,7 @@ public class Record {
     private Date date;
     private String city;
     private ArrayList<LatLng> points = new ArrayList<>();
+    private byte[] image;
 
     public Record() {
         name = "";
@@ -88,7 +90,7 @@ public class Record {
     }
 
     public void setDate(String date, Context context) {
-        DateFormat dateFormat = android.text.format.DateFormat.getDateFormat(context);
+        DateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy", Locale.getDefault());
         try {
             this.date = dateFormat.parse(date);
         } catch (ParseException e) {
@@ -114,5 +116,13 @@ public class Record {
 
     public void setPoints(String points) {
         this.points = pointsStringToArrayList(points);
+    }
+
+    public void setImage(byte[] image) {
+        this.image = image;
+    }
+
+    public byte[] getImage() {
+        return image;
     }
 }

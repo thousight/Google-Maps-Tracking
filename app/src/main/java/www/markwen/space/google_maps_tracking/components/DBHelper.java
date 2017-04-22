@@ -1,5 +1,6 @@
 package www.markwen.space.google_maps_tracking.components;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -26,7 +27,7 @@ public class DBHelper extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        db.execSQL("CREATE TABLE " + dbName + " (id INTEGER PRIMARY KEY, name CHAR(50), date CHAR(50), city CHAR(50), pointsStr CHAR(9999));");
+        db.execSQL("CREATE TABLE " + dbName + " (id INTEGER PRIMARY KEY, name CHAR(50), date CHAR(50), city CHAR(50), pointsStr CHAR(9999), image BLOB);");
     }
 
     @Override
@@ -36,7 +37,14 @@ public class DBHelper extends SQLiteOpenHelper {
     }
 
     public void saveRecord(SQLiteDatabase db, Record record) {
-        db.execSQL("INSERT INTO " + dbName + " VALUES(NULL, '" + record.getName() + "', '" + record.getDate().toString() + "', '" + record.getCity() + "', '" + record.getPointsString() + "');");
+        ContentValues toInsert = new ContentValues();
+        toInsert.put("name", record.getName());
+        toInsert.put("date", record.getDate().toString());
+        toInsert.put("city", record.getCity());
+        toInsert.put("pointsStr", record.getPointsString());
+        toInsert.put("image", record.getImage());
+
+        db.insert(dbName, null, toInsert);
     }
 
     public ArrayList<Record> getAllRecords(SQLiteDatabase db, Context context) {

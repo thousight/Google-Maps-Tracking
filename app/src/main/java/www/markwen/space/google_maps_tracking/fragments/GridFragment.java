@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import www.markwen.space.google_maps_tracking.MapsActivity;
 import www.markwen.space.google_maps_tracking.R;
 import www.markwen.space.google_maps_tracking.components.DBHelper;
+import www.markwen.space.google_maps_tracking.components.GridViewAdapter;
 import www.markwen.space.google_maps_tracking.components.Record;
 
 /**
@@ -28,6 +29,7 @@ public class GridFragment extends Fragment {
     private SQLiteDatabase db;
     private DBHelper dbHelper;
     private ArrayList<Record> allData = new ArrayList<>();
+    private GridViewAdapter gridViewAdapter;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -40,11 +42,13 @@ public class GridFragment extends Fragment {
         View view = inflater.inflate(R.layout.records_layout, container, false);
         gridView = (GridView) view.findViewById(R.id.gridview);
 
+        // Get all records from DB and list them in GridView
         db = ((MapsActivity)getActivity()).getDB();
         dbHelper = ((MapsActivity)getActivity()).getDBHelper();
         allData = dbHelper.getAllRecords(db, getContext());
 
-        // TODO: Get all records from DB and list them in GridView
+        gridViewAdapter = new GridViewAdapter(allData, getContext());
+        gridView.setAdapter(gridViewAdapter);
         return view;
     }
 }
