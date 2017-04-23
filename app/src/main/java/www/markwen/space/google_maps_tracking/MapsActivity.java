@@ -23,6 +23,7 @@ import android.os.Bundle;
 import android.support.v4.content.res.ResourcesCompat;
 import android.support.v4.view.ViewPager;
 import android.support.v7.widget.AppCompatCheckBox;
+import android.support.v7.widget.CardView;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.DisplayMetrics;
@@ -326,13 +327,13 @@ public class MapsActivity extends FragmentActivity implements
                 SensorManager.getOrientation(R, orientation);
                 int azimut = (int) Math.round(Math.toDegrees(orientation[0]));
                 RotateAnimation animation = new RotateAnimation(
-                        currentDegree, azimut,
+                        currentDegree, -azimut + 20,
                         Animation.RELATIVE_TO_SELF, 0.5f,
                         Animation.RELATIVE_TO_SELF, 0.5f);
                 animation.setDuration(200);
                 animation.setFillAfter(true);
                 compass.startAnimation(animation);
-                currentDegree = azimut - 20; // -20 is to correct the image angle
+                currentDegree = -azimut + 20; // -20 is to correct the image angle
             }
         }
     }
@@ -528,5 +529,18 @@ public class MapsActivity extends FragmentActivity implements
 
     public SQLiteDatabase getDB() {
         return db;
+    }
+
+    public void plotPoints(ArrayList<LatLng> points) {
+        mMap.clear();
+        if (points.size() > 1) {
+            for (int i = 0; i < points.size(); i++) {
+                if (i > 0) {
+                    createDashedLine(points.get(i-1), points.get(i));
+                }
+            }
+        } else {
+            moveCameraTo(points.get(0));
+        }
     }
 }

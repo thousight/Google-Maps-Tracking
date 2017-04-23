@@ -26,6 +26,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Locale;
 
+import www.markwen.space.google_maps_tracking.MapsActivity;
 import www.markwen.space.google_maps_tracking.R;
 
 /**
@@ -86,7 +87,7 @@ public class GridViewAdapter extends BaseAdapter {
         layout.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                
+                ((MapsActivity) context).plotPoints(records.get(i).getPoints());
             }
         });
 
