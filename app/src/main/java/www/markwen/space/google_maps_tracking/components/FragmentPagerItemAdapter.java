@@ -30,4 +30,8 @@ public class FragmentPagerItemAdapter extends FragmentStatePagerAdapter {
     public int getCount() {
         return fragments.length;
     }
+
+    public GridFragment getGridFragment() {
+        return (GridFragment)fragments[1];
+    }
 }

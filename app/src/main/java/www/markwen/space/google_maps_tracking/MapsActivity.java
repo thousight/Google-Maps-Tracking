@@ -69,6 +69,7 @@ import www.markwen.space.google_maps_tracking.components.CustomViewPager;
 import www.markwen.space.google_maps_tracking.components.DBHelper;
 import www.markwen.space.google_maps_tracking.components.FragmentPagerItemAdapter;
 import www.markwen.space.google_maps_tracking.components.Record;
+import www.markwen.space.google_maps_tracking.fragments.GridFragment;
 
 public class MapsActivity extends FragmentActivity implements
         OnMapReadyCallback,
@@ -89,6 +90,7 @@ public class MapsActivity extends FragmentActivity implements
     private DBHelper dbHelper;
     private SQLiteDatabase db;
     CustomViewPager viewPager;
+    FragmentPagerItemAdapter pagerAdapter;
     FrameLayout frameLayout;
     AppCompatCheckBox satellite;
     ImageView compass;
@@ -121,8 +123,8 @@ public class MapsActivity extends FragmentActivity implements
 
         // Initialize views
         viewPager = (CustomViewPager) findViewById(R.id.pager);
-        FragmentPagerItemAdapter adapter = new FragmentPagerItemAdapter(getSupportFragmentManager());
-        viewPager.setAdapter(adapter);
+        pagerAdapter = new FragmentPagerItemAdapter(getSupportFragmentManager());
+        viewPager.setAdapter(pagerAdapter);
         frameLayout = (FrameLayout) findViewById(R.id.frameLayout);
         satellite = (AppCompatCheckBox) findViewById(R.id.satellite);
         compass = (ImageView) findViewById(R.id.compass);
@@ -399,8 +401,14 @@ public class MapsActivity extends FragmentActivity implements
                         record.setName(recordName.getText().toString());
                         record.setPoints(recordedPoints);
                         record.setImage(screenshot[0]);
+
+                        // Save record
                         dbHelper.saveRecord(db, record);
                         Toast.makeText(MapsActivity.this, "Record saved", Toast.LENGTH_SHORT).show();
+
+                        // Refresh GridView
+                        GridFragment gridFragment = pagerAdapter.getGridFragment();
+                        gridFragment.refreshGridview();
                     }
                 })
                 .negativeText("Cancel")

@@ -51,4 +51,13 @@ public class GridFragment extends Fragment {
         gridView.setAdapter(gridViewAdapter);
         return view;
     }
+
+    public void refreshGridview() {
+        allData.clear();
+        ArrayList<Record> temp = dbHelper.getAllRecords(db, getContext());
+        for (int i = 0; i < temp.size(); i++) {
+            allData.add(temp.get(i));
+        }
+        gridViewAdapter.notifyDataSetChanged();
+    }
 }
